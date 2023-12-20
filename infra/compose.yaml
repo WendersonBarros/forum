@@ -1,3 +1,4 @@
+name: nexus-talk
 services:
   database:
     image: 'postgres:16.0-alpine3.18'
