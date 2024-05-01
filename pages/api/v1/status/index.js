@@ -5,7 +5,8 @@ const status = async (request, response) => {
   const postgresVersion = await database.query("SHOW server_version;");
   const postgresVersionValue = postgresVersion.rows[0].server_version;
 
-  const databaseMaxConnectionsResult = await database.query("SHOW MAX_CONNECTIONS")
+  const databaseMaxConnectionsResult =
+    await database.query("SHOW MAX_CONNECTIONS");
   const databaseMaxConnectionsValue =
     databaseMaxConnectionsResult.rows[0].max_connections;
 
@@ -22,7 +23,7 @@ const status = async (request, response) => {
     dependencies: {
       database: {
         version: postgresVersionValue,
-        max_connections: databaseMaxConnectionsValue,
+        max_connections: parseInt(databaseMaxConnectionsValue),
         opened_connections: databaseOpenedConnectionsValue,
       },
     }
