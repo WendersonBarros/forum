@@ -3,44 +3,49 @@ import { join } from "node:path";
 import database from "infra/database";
 
 async function migrations(request, response) {
-  const dbClient = await database.getNewClient();
-  const defaultMigrationOpitions = {
-    dbClient: dbClient,
-    dryRun: true,
-    dir: join("infra", "migrations"),
-    direction: "up",
-    verbose: true,
-    migrationsTable: "pgmigrations"
-  };
-
-  if (request.method === "GET") {
-    const pendingMigrations = await migrationRunner(defaultMigrationOpitions);
-    await dbClient.end();
-    return response.status(200).json(pendingMigrations);
+  const allowedMethods = ["GET", "POST"];
+  if (!allowedMethods.includes(request.method)) {
+    return response.status(400).json({
+      error: `Method "${request.method}" not allowed`,
+    });
   }
 
-  if (request.method === "POST") {
-    const migratedMigrations = await migrationRunner({
-      ...defaultMigrationOpitions,
-      dryRun: false,
-    });
+  let dbClient;
 
-    await dbClient.end();
+  try {
+    dbClient = await database.getNewClient();
+    const defaultMigrationOpitions = {
+      dbClient: dbClient,
+      dryRun: true,
+      dir: join("infra", "migrations"),
+      direction: "up",
+      verbose: true,
+      migrationsTable: "pgmigrations"
+    };
 
-    if (migratedMigrations.length) {
-      return response.status(201).json(migratedMigrations);
+    if (request.method === "GET") {
+      const pendingMigrations = await migrationRunner(defaultMigrationOpitions);
+      return response.status(200).json(pendingMigrations);
     }
 
-    return response.status(200).json(migratedMigrations);
+    if (request.method === "POST") {
+      const migratedMigrations = await migrationRunner({
+        ...defaultMigrationOpitions,
+        dryRun: false,
+      });
+
+      if (migratedMigrations.length) {
+        return response.status(201).json(migratedMigrations);
+      }
+
+      return response.status(200).json(migratedMigrations);
+    }
+  } catch (error) {
+    console.error(error);
+    throw error;
+  } finally {
+    dbClient.end();
   }
-
-  if (request.method !== "GET" && request.method !== "POST") {
-    await dbClient.end();
-    return response.status(400).send("Operation not permitted!");
-  }
-
-
-  return response.status(405).end();
 }
 
 export default migrations;
